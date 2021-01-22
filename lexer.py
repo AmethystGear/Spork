@@ -30,6 +30,7 @@ def match(token_type, fn, char_stream: CharStream):
     else:
         return Token(token_type, matching)
 
+# store token's type and the actual value of the token
 class Token():
     def __init__(self, token_type: TokenType, value: str):
         self.token_type = token_type
@@ -38,6 +39,8 @@ class Token():
     def __repr__(self):
         return str(self.token_type) + ", '" + self.value + "'"
 
+# if the CharStream exactly matches val, return val, else return None
+# if whitespace is required, also return None if there is no whitespace after the token.
 def exact(val: str, require_whitespace_after: bool, char_stream: CharStream):
     val_stream = CharStream(val)
     while val_stream.peek() == char_stream.peek():
@@ -49,6 +52,7 @@ def exact(val: str, require_whitespace_after: bool, char_stream: CharStream):
 
     return val if val_stream.eof() else None
 
+# if the CharStream matches a number, return that number, otherwise return None
 def number(char_stream: CharStream):
     num = ''
     if char_stream.peek() == '-':
@@ -59,6 +63,7 @@ def number(char_stream: CharStream):
 
     return None if num == '' or num == '-' else num
 
+# return a valid identifier if it exists, otherwise return None
 def identifier(char_stream: CharStream):
     ident = ''
     while not char_stream.eof() and (char_stream.peek().isalnum() or char_stream.peek() == '_'):
@@ -66,6 +71,7 @@ def identifier(char_stream: CharStream):
 
     return None if ident == '' else ident
 
+# all the different types of tokens that we can match on
 left_paren = partial(match, TokenType.PUNC, partial(exact, '(', False))
 right_paren = partial(match, TokenType.PUNC, partial(exact, ')', False))
 left_bracket = partial(match, TokenType.PUNC, partial(exact, '{', False))
@@ -82,10 +88,12 @@ num = partial(match, TokenType.NUM, number)
 
 ident = partial(match, TokenType.IDENT, identifier)
 
+# put all the above tokens into a list so we can loop over them
 token_types = [left_paren, right_paren, left_bracket, \
                right_bracket, delim, terminator, type_specifier, \
                eq, convert, let, num, ident]
 
+# generate a stream of tokens from the stream of characters
 class TokenStream:
     def __init__(self, char_stream: CharStream):
         self.char_stream = char_stream
@@ -135,7 +143,7 @@ class TokenStream:
         return self.char_stream.eof()
 
 
-        
+# test code that only runs if we're running the lexer directly
 if __name__ == "__main__":
     import sys
     file = sys.argv[1]
