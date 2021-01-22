@@ -1,0 +1,8 @@
+let func = (a : int, b : int) -> int {
+   a
+};
+
+let main = ( ) {
+    print(func(2,30));
+    print(func(19, 17));
+};
