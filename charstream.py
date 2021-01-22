@@ -33,4 +33,19 @@ class CharStream:
 
     # fail program compilation at our current position, with a message
     def err(self, msg: str):
-        raise Exception(msg + '(' + str(self.line) + ':' + str(self.col) + ')')
+        print("Compilation failed at line: " + str(self.line) + ", col: " + str(self.col))
+        print(msg)
+        col = self.col
+        self.pos -= self.col
+        self.col = 0
+        while self.peek() != '\n':
+            print(self.next(), end='')
+
+        print()
+        for _ in range(col):
+            print(' ', end='')
+
+        print('^')
+
+        quit()
+

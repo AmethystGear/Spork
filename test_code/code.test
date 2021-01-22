@@ -1,5 +1,5 @@
 let func = (a : int, b : int) -> int {
-   a
+   a # here be a comment
 };
 
 let main = ( ) {
