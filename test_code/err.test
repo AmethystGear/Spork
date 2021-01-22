@@ -1,4 +1,5 @@
 let main = () {
    let a = 5;
-   let let= 10;
+   let trueness = 10;
+   let 2020hi = 10;
 };
