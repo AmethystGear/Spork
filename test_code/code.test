@@ -1,11 +1,8 @@
-let func = (a : int, b : int) -> int {
-   a # here be a comment
+let choose = fn (a : bool) -> (int, int) {
+    if a {
+        1
+    } else {
+        0
+    }
 };
-
-let main = ( ) {
-    print(func(2,30));
-    print(func(19, 17));
-    let val = "example string";
-    let true = true;
-    ((false))**1234
-};
+let a = choose;

@@ -68,6 +68,12 @@ def parse_number(valid_post_tokens, char_stream: CharStream):
     while not char_stream.eof() and char_stream.peek().isdigit():
         num += char_stream.next()
 
+    if num == '':
+        return None
+
+    if char_stream.peek().isspace():
+        return num
+
     found_valid_token = False
     state = char_stream.get_state()
     for token in valid_post_tokens:
@@ -77,7 +83,7 @@ def parse_number(valid_post_tokens, char_stream: CharStream):
     
     char_stream.reset_to(state)
 
-    return None if num == '' or (not found_valid_token and valid_post_tokens) else num
+    return None if not found_valid_token and valid_post_tokens else num
 
 # match a boolean literal
 def parse_boolean(valid_post_tokens, char_stream: CharStream):
@@ -137,10 +143,13 @@ left_paren = partial(match, TokenType.PUNC, partial(parse_exact, '('))
 right_paren = partial(match, TokenType.PUNC, partial(parse_exact, ')'))
 left_bracket = partial(match, TokenType.PUNC, partial(parse_exact, '{'))
 right_bracket = partial(match, TokenType.PUNC, partial(parse_exact, '}'))
+left_sq_bracket = partial(match, TokenType.PUNC, partial(parse_exact, '['))
+right_sq_bracket = partial(match, TokenType.PUNC, partial(parse_exact, ']'))
 delim = partial(match, TokenType.PUNC, partial(parse_exact, ','))
 terminator = partial(match, TokenType.PUNC, partial(parse_exact, ';'))
 type_specifier = partial(match, TokenType.PUNC, partial(parse_exact, ':'))
-punctuation = [left_paren, right_paren, left_bracket, right_bracket, delim, terminator, type_specifier]
+period = partial(match, TokenType.PUNC, partial(parse_exact, '.'))
+punctuation = [left_paren, right_paren, left_bracket, right_bracket, left_sq_bracket, right_sq_bracket, delim, terminator, type_specifier, period]
 
 # operators
 eq = partial(match, TokenType.OPERATOR, partial(parse_exact, '='))
@@ -150,11 +159,20 @@ sub = partial(match, TokenType.OPERATOR, partial(parse_exact, '-'))
 power = partial(match, TokenType.OPERATOR, partial(parse_exact, '**'))
 mul = partial(match, TokenType.OPERATOR, partial(parse_exact, '*'))
 div = partial(match, TokenType.OPERATOR, partial(parse_exact, '/'))
-ops = [eq, into, add, sub, power, mul, div]
+_not = partial(match, TokenType.OPERATOR, partial(parse_exact, '!'))
+_and = partial(match, TokenType.OPERATOR, partial(parse_exact, '&&'))
+_or = partial(match, TokenType.OPERATOR, partial(parse_exact, '||'))
+ops = [eq, into, add, sub, power, mul, div, _not, _and, _or]
 
 # keywords 
 let = partial(match, TokenType.KEYWORD, partial(parse_exact, 'let', require_whitespace=True))
-keywords = [let]
+struct = partial(match, TokenType.KEYWORD, partial(parse_exact, 'struct', valid_post_tokens=[left_bracket], require_whitespace=True))
+interface = partial(match, TokenType.KEYWORD, partial(parse_exact, 'interface',valid_post_tokens=[left_bracket],  require_whitespace=True))
+_self = partial(match, TokenType.KEYWORD, partial(parse_exact, 'Self', valid_post_tokens=[right_paren, delim], require_whitespace=True))
+_if = partial(match, TokenType.KEYWORD, partial(parse_exact, 'if', valid_post_tokens=[left_bracket], require_whitespace=True))
+_else = partial(match, TokenType.KEYWORD, partial(parse_exact, 'else', valid_post_tokens=[left_bracket], require_whitespace=True))
+fn = partial(match, TokenType.KEYWORD, partial(parse_exact, 'fn', valid_post_tokens=[right_paren], require_whitespace=True))
+keywords = [let, struct, interface, _self, fn]
 
 # literals
 num = partial(match, TokenType.LIT, partial(parse_number, punctuation + ops))
@@ -215,11 +233,17 @@ class TokenStream:
 
     # return the current token
     def peek(self) -> Token:
-        return current
+        if self.current is None:
+            self.next()
+
+        return self.current
 
     # return if we're at the end of the file or not
     def eof(self) -> bool:
         return self.char_stream.eof()
+
+    def err(self, msg):
+        self.char_stream.err(msg)
         
 # testing this for 
 if __name__ == "__main__":
