@@ -1,9 +1,9 @@
-# Embr
+# Spork
 Making a programming language, because I can, I guess
 
-Not sure what to call this thing yet, for now, maybe Embr?
+Not sure what to call this thing yet, for now, maybe Spork?
 
-In Embr, everything is an expression. Why? Cause it's super easy to make a language that way, and it parses nicely.
+In Spork, everything is an expression. Why? Cause it's super easy to make a language that way, and it parses nicely.
 
 ## Syntax
 ```
