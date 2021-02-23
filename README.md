@@ -37,7 +37,7 @@ let <identifier> = <expr>; <expr>
 Note that all functions are closures (that is, they can refer to any bindings made above them).
 
 ## Cool, how do I write and run code?
-just use ./run.sh "<path/to/your/file>". It'll print the result of your program.
+just use ./run.sh "<path/to/your/file>". It'll print the result of your program. It also builds all the ocaml files used to run your code, so if you make any tweaks to the interpreter, parser, etc, it'll affect the behavior of the program (obviously).
 
 ## Error messages?
 No. Also the typechecker is nonexistent, if your types are bad, stuff will just break at runtime. So have fun with that.
