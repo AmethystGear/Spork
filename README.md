@@ -1,6 +1,4 @@
 # Spork
-Making a programming language, because I can, I guess
-
 Not sure what to call this thing yet, for now, maybe Spork?
 
 In Spork, everything is an expression. Why? Cause it's super easy to make a language that way, and it parses nicely.
