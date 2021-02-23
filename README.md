@@ -42,7 +42,7 @@ Note that all functions are closures (that is, they can refer to any bindings ma
 just use ./run.sh "<path/to/your/file>". It'll print the result of your program.
 
 ## Error messages?
-No. Also the typechecker is nonexistent, stuff will just break at runtime. So have fun with that.
+No. Also the typechecker is nonexistent, if your types are bad, stuff will just break at runtime. So have fun with that.
 
 ## Why is your language so bad?
 Jeez. Cut me some slack, I wrote all this code in like a few days...
