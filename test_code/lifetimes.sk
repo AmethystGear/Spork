@@ -1,0 +1,18 @@
+let A = struct {
+    x : int
+    y : string
+};
+
+let old_x = 0;
+let old_y = "hello";
+let '(z) = A(old_x, old_y);
+{
+    let new_x = 5; 
+    z.#x(new_x); // z takes ownership of new_x 
+                  // which means new_x's lifetime is now the end of the program
+}
+
+
+
+
+

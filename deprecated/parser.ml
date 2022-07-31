@@ -6,6 +6,7 @@ type langtype =
   | Float
   | String
   | Tuple of langtype list
+  | DefType of Lexer.ident
 
 type param = (Lexer.ident * langtype)
 
@@ -28,6 +29,7 @@ type expr =
   | Literal of Lexer.literal
   | Let of (Lexer.ident * expr) * expr
   | FnDef of (param list) * langtype * expr
+  | StructDef of (param list)
   | IfElse of (expr * expr * expr)
   | Var of Lexer.ident
   | FnCall of (Lexer.ident * (expr list))
@@ -84,9 +86,9 @@ let rec parse_type (tokens : token list) : (langtype * (token list)) option =
       (let lang_type = match str with
           | "int" -> Some Int
           | "bool" -> Some Bool
-          | "flt" -> Some Float
-          | "str" -> Some String
-          | _ -> None 
+          | "float" -> Some Float
+          | "string" -> Some String
+          | _ -> Some (DefType str)
        in
        match lang_type with
        | Some(lt) -> Some(lt, tl)
@@ -101,9 +103,14 @@ let parse_param (tokens : token list) : (param * (token list)) option =
      | _ -> None)
   | _ -> None
 
-let parse_params (tokens : token list) : ((param list) * (token list)) option =
+let parse_params_paren (tokens : token list) : ((param list) * (token list)) option =
   match tokens with
   | ((Lexer.Punc Lexer.LeftParen), _, _) :: tl -> parse_delimited parse_param (Lexer.Punc Lexer.Delim) (Lexer.Punc Lexer.RightParen) tl
+  | _ -> None
+
+let parse_params_scope (tokens : token list) : ((param list) * (token list)) option =
+  match tokens with
+  | ((Lexer.Punc Lexer.LeftScope), _, _) :: tl -> parse_delimited parse_param (Lexer.Punc Lexer.Delim) (Lexer.Punc Lexer.RightScope) tl
   | _ -> None
 
 let rec parse_expr (tokens : token list) : (expr * (token list)) =
@@ -114,6 +121,7 @@ let rec parse_expr (tokens : token list) : (expr * (token list)) =
       | (Lexer.Kw Lexer.Let) -> parse_let tokens
       | (Lexer.Kw Lexer.Fn) -> parse_fn_def tokens
       | (Lexer.Kw Lexer.If) -> parse_ifelse tokens
+      | (Lexer.Kw Lexer.Struct) -> parse_struct tokens
       | (Lexer.Lit _) -> parse_lit tokens
       | (Lexer.Ident ident) -> (match parse_fncall tokens with Some(v) -> Some(v) | None -> Some(Var ident, tl))
       | (Lexer.Op op) -> (match op_to_singleop op with Some _ -> parse_singleop tokens | None -> None)
@@ -124,11 +132,21 @@ let rec parse_expr (tokens : token list) : (expr * (token list)) =
     | Some (expression) -> expression
     | None -> failwith ("Could not parse expression at line: " ^ string_of_int(line) ^ " col: " ^ string_of_int(col))
 
+and parse_struct (tokens : token list) : (expr * (token list)) option =
+  match tokens with
+  | ((Lexer.Kw Lexer.Struct), _, _) :: tl ->
+    (
+      match (parse_params_scope tl) with
+      | Some (params, tl) -> Some ((StructDef params), tl)
+      | _ -> None
+    )
+  | _ -> None
+
 and parse_fn_def (tokens : token list) : (expr * (token list)) option =
   match tokens with
   | ((Lexer.Kw Lexer.Fn), _, _) :: tl -> 
     (
-      match parse_params tl with
+      match parse_params_paren tl with
       | Some (params, ((Lexer.Op Lexer.Into), _, _) :: tl) -> 
         (
           match parse_type tl with
@@ -222,3 +240,4 @@ let parse tokens = match parse_expr tokens with (expr, []) -> expr | _ -> failwi
 
 let test_type = parse_type(tokenize "(int, int, (bool, int))")
 let test_code = parse_expr(tokenize "let x = fn (a : int) -> int { ((a) + (a)) + ((a) + (a)) }; x(5)")
+let test_1 = parse_expr(tokenize "let A = struct { x : int, y : int }; A(0, 1)")

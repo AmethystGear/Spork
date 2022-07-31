@@ -26,7 +26,9 @@ type kw =
   | Let
   | If
   | Else
-
+  | Type
+  | Struct
+  | Variant
 type literal =
   | Int of int
   | Flt of float
@@ -193,6 +195,8 @@ let match_kws (xs : char list) : (kw * char list * int) option =
       ("let", Let); 
       ("if", If); 
       ("else", Else);
+      ("struct", Struct);
+      ("variant", Variant);
     ] in
   match_first xs ops
 
@@ -258,3 +262,4 @@ let tokenize (s : string) : (token list) =
 let test1 = tokenize "let x = 5;"
 let test2 = tokenize "let x = true; let y = false;"
 let test3 = tokenize "let add= fn (a : int, b : int) -> int { a + b };"
+let test4 = tokenize "let A = type struct { test_1 : int, test_2 : int };"
