@@ -198,7 +198,7 @@ static bool match_float(char **text_ptr, Literal *lit)
     }
     // if there either is no decimal, or we end on the decimal point,
     // this isn't a valid float
-    if (!has_decimal || curr != *text_ptr || *(curr - 1) == '.' || !proper_token_termination(curr))
+    if (!has_decimal || curr == *text_ptr || *(curr - 1) == '.' || !proper_token_termination(curr))
     {
         return false;
     }
@@ -245,9 +245,9 @@ typedef bool (*LiteralMatcher)(char **text_ptr, Literal *lit);
 static bool match_literal(char **text_ptr, Literal *lit)
 {
     LiteralMatcher literal_matchers[] = {
+        match_float,
         match_int,
         match_bool,
-        match_float,
         match_string,
     };
 
@@ -426,4 +426,47 @@ cvector_vector_type(Token) tokenize(char *s)
             text_ptr++;
     }
     return tokens;
+}
+
+// TESTS
+
+void test_lex_literals()
+{
+    char string[] = "true false 0 1 45 \"test string\" 55.0 47.81 0.35";
+    cvector_vector_type(Token) tokens = tokenize(string);
+    for (int i = 0; i < cvector_size(tokens); i++)
+    {
+        assert(tokens[i].token_kind == LitTok);
+    }
+
+    assert(tokens[0].token_type.lit.literal_kind == BoolLit);
+    assert(tokens[0].token_type.lit.literal_type.Bool == true);
+
+    assert(tokens[1].token_type.lit.literal_kind == BoolLit);
+    assert(tokens[1].token_type.lit.literal_type.Bool == false);
+
+    assert(tokens[2].token_type.lit.literal_kind == IntLit);
+    assert(tokens[2].token_type.lit.literal_type.Int == 0);
+
+    assert(tokens[3].token_type.lit.literal_kind == IntLit);
+    assert(tokens[3].token_type.lit.literal_type.Int == 1);
+
+    assert(tokens[4].token_type.lit.literal_kind == IntLit);
+    assert(tokens[4].token_type.lit.literal_type.Int == 45);
+
+    assert(tokens[5].token_type.lit.literal_kind == StringLit);
+    assert(strcmp(tokens[5].token_type.lit.literal_type.String, "test string") == 0);
+
+    assert(tokens[6].token_type.lit.literal_kind == FloatLit);
+    assert(tokens[6].token_type.lit.literal_type.Float == 55.0);
+
+    assert(tokens[7].token_type.lit.literal_kind == FloatLit);
+    assert(tokens[7].token_type.lit.literal_type.Float == 47.81);
+
+    assert(tokens[8].token_type.lit.literal_kind == FloatLit);
+    assert(tokens[8].token_type.lit.literal_type.Float == 0.35);
+
+    
+
+    cvector_free(tokens);
 }

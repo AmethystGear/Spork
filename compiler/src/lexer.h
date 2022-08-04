@@ -37,9 +37,9 @@ typedef enum
 
 typedef enum LiteralKind
 {
+    FloatLit,
     IntLit,
     BoolLit,
-    FloatLit,
     StringLit,
 } LiteralKind;
 
@@ -86,4 +86,5 @@ typedef struct Token
 cvector_vector_type(Token) tokenize(char *s);
 void free_token(void *elem);
 sds token_to_string(Token *token);
+void test_lex_literals();
 #endif

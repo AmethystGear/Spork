@@ -271,9 +271,9 @@ static Type *parse_tuple_type(ParserPointer *curr)
 static Type *parse_literal_type(ParserPointer *curr)
 {
     Token literal_types[] = {
+        create_match_token(IdentTok, -1, "float"),
         create_match_token(IdentTok, -1, "int"),
         create_match_token(IdentTok, -1, "bool"),
-        create_match_token(IdentTok, -1, "float"),
         create_match_token(IdentTok, -1, "string"),
     };
     Token *next_token;
@@ -377,7 +377,6 @@ void test_parse_let()
 {
     char program_string[] = "let x = \"hello world\"; 5";
     cvector_vector_type(Token) tokens = tokenize(program_string);
-    cvector_set_elem_destructor(tokens, free_token);
 
     ParserPointer start = {.token_ptr = 0, .tokens = tokens};
     Expr *program = parse_expr(&start);
