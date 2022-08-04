@@ -5,15 +5,15 @@
 #include "lexer.h"
 #include "../lib/sds/sds.h"
 #include "../lib/cvector.h"
-#include "macros.h"
+#include "utils.h"
 
 typedef char *(*Matcher)(char *match_string, char *text_ptr);
 
-bool match_symbol(char **text_ptr, Symbol *symb);
+static bool match_symbol(char **text_ptr, Symbol *symb);
 
 // exactly match provided string to text
-// if exact match, return advanced text_ptr, otherwise return original text_ptr.
-char *match_exact(char *match_string, char *text_ptr)
+// if exact match, return advanced text_ptr, otherwise return original text_ptr
+static char *match_exact(char *match_string, char *text_ptr)
 {
     size_t match_len = strlen(match_string);
     for (int i = 0; i < match_len; i++)
@@ -27,9 +27,9 @@ char *match_exact(char *match_string, char *text_ptr)
 }
 
 // given a provided matcher and an array of strings, find the first match to the text.
-// out parameters: reference to text_ptr, match_index.
-// return if there is any match.
-bool match_first(Matcher matcher, char *strings[], int n_strings, char **text_ptr, int *match_index)
+// out parameters: reference to text_ptr, match_index
+// return if there is any match
+static bool match_first(Matcher matcher, char *strings[], int n_strings, char **text_ptr, int *match_index)
 {
     for (int i = 0; i < n_strings; i++)
     {
@@ -44,18 +44,18 @@ bool match_first(Matcher matcher, char *strings[], int n_strings, char **text_pt
     return false;
 }
 
-// confirms if the end of the token is properly terminated.
-// this means the string must be '\0', whitespace, or a symbol.
-bool proper_token_termination(char *after_token_end)
+// confirms if the end of the token is properly terminated
+// this means the string must be '\0', whitespace, or a symbol
+static bool proper_token_termination(char *after_token_end)
 {
     Symbol _symbol;
     return *after_token_end == '\0' || isspace(*after_token_end) || match_symbol(&after_token_end, &_symbol);
 }
 
 // exactly match provided string to text, and confirm that there is no continuation of the token
-// after it ends. (new symbol token start, end of string, or whitespace).
-// if exact match, return advanced text_ptr, otherwise return original text_ptr.
-char *match_exact_confirm_terminate(char *match_string, char *text_ptr)
+// after it ends. (new symbol token start, end of string, or whitespace)
+// if exact match, return advanced text_ptr, otherwise return original text_ptr
+static char *match_exact_confirm_terminate(char *match_string, char *text_ptr)
 {
     char *new_text_ptr = match_exact(match_string, text_ptr);
     if (new_text_ptr == text_ptr)
@@ -66,7 +66,7 @@ char *match_exact_confirm_terminate(char *match_string, char *text_ptr)
 }
 
 //
-bool match_type(Matcher matcher, char *strings[], int n_strings, char **text_ptr, void *type)
+static bool match_type(Matcher matcher, char *strings[], int n_strings, char **text_ptr, void *type)
 {
     int match_index = -1;
     bool matched = match_first(matcher, strings, n_strings, text_ptr, &match_index);
@@ -77,9 +77,9 @@ bool match_type(Matcher matcher, char *strings[], int n_strings, char **text_ptr
     return matched;
 }
 
-// array of all the string symbols.
-// see Symbol in lexer.h to find what each of these map to.
-char *symbols[] = {
+// array of all the string symbols
+// see Symbol in lexer.h to find what each of these map to
+static char *symbols[] = {
     "(",
     ")",
     "{",
@@ -99,17 +99,17 @@ char *symbols[] = {
     "!",
 };
 
-// match any symbol.
-// out parameter: punc - will contain matched symbol if any symbol matches.
-// return true if there is any match else false.
-bool match_symbol(char **text_ptr, Symbol *symb)
+// match any symbol
+// out parameter: punc - will contain matched symbol if any symbol matches
+// return true if there is any match else false
+static bool match_symbol(char **text_ptr, Symbol *symb)
 {
     return match_type(match_exact, symbols, ARRAY_LEN(symbols), text_ptr, (void *)symb);
 }
 
-// array of all the string keywords.
-// see Keyword in lexer.h to find what each of these map to.
-char *keywords[] = {
+// array of all the string keywords
+// see Keyword in lexer.h to find what each of these map to
+static char *keywords[] = {
     "fn",
     "let",
     "if",
@@ -118,22 +118,22 @@ char *keywords[] = {
     "struct",
 };
 
-// match any keyword. checks for proper token termination (see `proper_token_termination`).
+// match any keyword. checks for proper token termination (see `proper_token_termination`)
 // out parameters:
-//     kw - will contain matched keyword if any keyword matches.
-//     text_ptr - is updated if there is a match.
-// return true if there is any match else false.
-bool match_kw(char **text_ptr, KeyWord *kw)
+//     kw - will contain matched keyword if any keyword matches
+//     text_ptr - is updated if there is a match
+// return true if there is any match else false
+static bool match_kw(char **text_ptr, KeyWord *kw)
 {
     return match_type(match_exact_confirm_terminate, keywords, ARRAY_LEN(keywords), text_ptr, (void *)kw);
 }
 
-// match a boolean literal. checks for proper token termination (see `proper_token_termination`).
+// match a boolean literal. checks for proper token termination (see `proper_token_termination`)
 // out parameters:
-//     lit - will contain matched boolean if "true" or "false" matches.
-//     text_ptr - is updated if there is a match.
-// return true if there is any match else false.
-bool match_bool(char **text_ptr, Literal *lit)
+//     lit - will contain matched boolean if "true" or "false" matches
+//     text_ptr - is updated if there is a match
+// return true if there is any match else false
+static bool match_bool(char **text_ptr, Literal *lit)
 {
     char *boolean[] = {"true", "false"};
     bool boolean_value[] = {true, false};
@@ -147,12 +147,12 @@ bool match_bool(char **text_ptr, Literal *lit)
     return matched;
 }
 
-// match an integer literal. checks for proper token termination (see `proper_token_termination`).
+// match an integer literal. checks for proper token termination (see `proper_token_termination`)
 // out parameters:
-//     lit - will contain matched integer if the following text is only digits.
-//     text_ptr - is updated if there is a match.
-// return true if there is any match else false.
-bool match_int(char **text_ptr, Literal *lit)
+//     lit - will contain matched integer if the following text is only digits
+//     text_ptr - is updated if there is a match
+// return true if there is any match else false
+static bool match_int(char **text_ptr, Literal *lit)
 {
     char *curr = *text_ptr;
     while (isdigit(*curr))
@@ -172,12 +172,12 @@ bool match_int(char **text_ptr, Literal *lit)
     return matched;
 }
 
-// match a float literal. checks for proper token termination (see `proper_token_termination`).
+// match a float literal. checks for proper token termination (see `proper_token_termination`)
 // out parameters:
-//     lit - will contain matched float if the following text is only digits (and a single decimal point).
-//     text_ptr - is updated if there is a match.
-// return true if there is any match else false.
-bool match_float(char **text_ptr, Literal *lit)
+//     lit - will contain matched float if the following text is only digits (and a single decimal point)
+//     text_ptr - is updated if there is a match
+// return true if there is any match else false
+static bool match_float(char **text_ptr, Literal *lit)
 {
     char *curr = *text_ptr;
     bool has_decimal = false;
@@ -197,7 +197,7 @@ bool match_float(char **text_ptr, Literal *lit)
         curr++;
     }
     // if there either is no decimal, or we end on the decimal point,
-    // this isn't a valid float.
+    // this isn't a valid float
     if (!has_decimal || curr != *text_ptr || *(curr - 1) == '.' || !proper_token_termination(curr))
     {
         return false;
@@ -212,7 +212,7 @@ bool match_float(char **text_ptr, Literal *lit)
     return true;
 }
 
-bool match_string(char **text_ptr, Literal *lit)
+static bool match_string(char **text_ptr, Literal *lit)
 {
     char *curr = *text_ptr;
     if (*curr != '"')
@@ -242,11 +242,11 @@ bool match_string(char **text_ptr, Literal *lit)
 }
 
 typedef bool (*LiteralMatcher)(char **text_ptr, Literal *lit);
-bool match_literal(char **text_ptr, Literal *lit)
+static bool match_literal(char **text_ptr, Literal *lit)
 {
     LiteralMatcher literal_matchers[] = {
-        match_bool,
         match_int,
+        match_bool,
         match_float,
         match_string,
     };
@@ -261,7 +261,7 @@ bool match_literal(char **text_ptr, Literal *lit)
     return false;
 }
 
-bool match_ident(char **text_ptr, Identifier *ident)
+static bool match_ident(char **text_ptr, Identifier *ident)
 {
     char *curr = *text_ptr;
     while (!proper_token_termination(curr))
@@ -280,7 +280,7 @@ bool match_ident(char **text_ptr, Identifier *ident)
     return matched;
 }
 
-bool match_token(char **text_ptr, Token *token)
+static bool match_token(char **text_ptr, Token *token)
 {
     Symbol symbol;
     if (match_symbol(text_ptr, &symbol))
@@ -316,65 +316,22 @@ bool match_token(char **text_ptr, Token *token)
     return false;
 }
 
-void free_token(void *elem)
-{
-    if (elem == NULL)
-    {
-        return;
-    }
-    Token *token = elem;
-    if (token->token_kind == LitTok && token->token_type.lit.literal_kind == StringLit)
-    {
-        sdsfree(token->token_type.lit.literal_type.String);
-    }
-    if (token->token_kind == IdentTok)
-    {
-        sdsfree(token->token_type.ident);
-    }
-}
-
-cvector_vector_type(Token) tokenize(char *s)
-{
-    int len = strlen(s);
-    char *text_ptr = s;
-
-    cvector_vector_type(Token) tokens = NULL;
-    cvector_set_elem_destructor(tokens, free_token);
-    while ((text_ptr - s) < len)
-    {
-        while (isspace(*text_ptr))
-            text_ptr++;
-
-        Token token;
-        if (!match_token(&text_ptr, &token))
-        {
-            fprintf(stderr, "error parsing token\n");
-            abort();
-        }
-        cvector_push_back(tokens, token);
-
-        while (isspace(*text_ptr))
-            text_ptr++;
-    }
-    return tokens;
-}
-
-sds symbol_to_string(void *symbol)
+static sds symbol_to_string(void *symbol)
 {
     return sdsnew(symbols[*(int *)symbol]);
 }
 
-sds keyword_to_string(void *kw)
+static sds keyword_to_string(void *kw)
 {
     return sdsnew(keywords[*(int *)kw]);
 }
 
-sds ident_to_string(void *ident)
+static sds ident_to_string(void *ident)
 {
     return sdsdup(*(sds *)ident);
 }
 
-sds literal_to_string(void *lit)
+static sds literal_to_string(void *lit)
 {
     Literal *l = (Literal *)lit;
     switch (l->literal_kind)
@@ -391,7 +348,12 @@ sds literal_to_string(void *lit)
     return sdsnew("unknown literal");
 }
 
+// a function pointer that takes token->token_type.(kw/symb/lit/ident) as input
+// and returns a string representation that the caller must free
 typedef sds (*TokenStringifier)(void *);
+
+// return a string representation of the provided Token
+// caller is responsible for freeing this string
 sds token_to_string(Token *token)
 {
     char *token_kinds[] = {
@@ -421,3 +383,47 @@ sds token_to_string(Token *token)
     return token_str;
 }
 
+// free anything owned by provided Token*
+void free_token(void *elem)
+{
+    if (elem == NULL)
+    {
+        return;
+    }
+    Token *token = elem;
+    if (token->token_kind == LitTok && token->token_type.lit.literal_kind == StringLit)
+    {
+        sdsfree(token->token_type.lit.literal_type.String);
+    }
+    if (token->token_kind == IdentTok)
+    {
+        sdsfree(token->token_type.ident);
+    }
+}
+
+// convert provided string to a vector of Tokens
+cvector_vector_type(Token) tokenize(char *s)
+{
+    int len = strlen(s);
+    char *text_ptr = s;
+
+    cvector_vector_type(Token) tokens = NULL;
+    cvector_set_elem_destructor(tokens, free_token);
+    while ((text_ptr - s) < len)
+    {
+        while (isspace(*text_ptr))
+            text_ptr++;
+
+        Token token;
+        if (!match_token(&text_ptr, &token))
+        {
+            fprintf(stderr, "error parsing token\n");
+            abort();
+        }
+        cvector_push_back(tokens, token);
+
+        while (isspace(*text_ptr))
+            text_ptr++;
+    }
+    return tokens;
+}

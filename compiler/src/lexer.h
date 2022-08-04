@@ -37,16 +37,16 @@ typedef enum
 
 typedef enum LiteralKind
 {
-    BoolLit,
     IntLit,
+    BoolLit,
     FloatLit,
     StringLit,
 } LiteralKind;
 
 typedef union
 {
-    bool Bool;
     int Int;
+    bool Bool;
     double Float;
     sds String;
 } LiteralType;

@@ -4,34 +4,58 @@
 #include "../lib/cvector.h"
 
 typedef struct Expr Expr;
-typedef struct LangType LangType;
+typedef struct Type Type;
 
-typedef struct
+typedef struct NameTypePair
 {
-    Identifier param_name;
-    LangType *type;
-} Param;
+    Identifier name;
+    Type* type;
+} NameTypePair;
 
-typedef struct
+typedef enum TypeKind {
+    DefType,
+    LitType,
+    TupleType,
+    NamedTupleType
+} TypeKind;
+
+typedef cvector_vector_type(Type *) Tuple;
+typedef cvector_vector_type(NameTypePair *) NamedTuple;
+
+typedef union TypeType
+{
+    Identifier defined;
+    LiteralKind literal;
+    Tuple tuple;
+    NamedTuple named_tuple;
+} TypeType;
+
+typedef struct Type
+{
+    TypeKind type_kind;
+    TypeType type_type;
+} Type;
+
+typedef struct Let
 {
     Identifier variable;
     Expr *equal_expr;
     Expr *next_expr;
 } Let;
 
-typedef struct
+typedef struct FnDef
 {
-    cvector_vector_type(Param) params;
-    LangType *return_type;
+    NamedTuple arguments;
+    Type *return_type;
     Expr *body;
 } FnDef;
 
-typedef struct
+typedef struct StructDef
 {
-    cvector_vector_type(Param) params;
+   NamedTuple fields;
 } StructDef;
 
-typedef struct
+typedef struct IfElse
 {
     Expr *condition;
     Expr *if_body;
@@ -49,7 +73,7 @@ typedef struct
     cvector_vector_type(Expr) params;
 } FnCall;
 
-typedef union 
+typedef union
 {
     Literal literal;
     Let let;
@@ -60,7 +84,7 @@ typedef union
     FnCall fn_call;
 } ExprType;
 
-typedef enum 
+typedef enum
 {
     LiteralExpr,
     LetExpr,
@@ -71,7 +95,8 @@ typedef enum
     FnCallExpr
 } ExprKind;
 
-struct Expr {
+struct Expr
+{
     ExprType expr_type;
     ExprKind expr_kind;
 };
@@ -82,6 +107,11 @@ typedef struct
     int token_ptr;
 } ParserPointer;
 
-Expr* parse_expr(ParserPointer start, ParserPointer *end);
+Expr *parse_expr(ParserPointer *curr);
+
+// tests
+void test_parse_named_type();
+void test_parse_type();
+void test_parse_let();
 
 #endif
