@@ -97,6 +97,7 @@ static char *symbols[] = {
     "&&",
     "||",
     "!",
+    "|",
 };
 
 // match any symbol
@@ -115,7 +116,6 @@ static char *keywords[] = {
     "if",
     "else",
     "type",
-    "struct",
 };
 
 // match any keyword. checks for proper token termination (see `proper_token_termination`)
@@ -409,21 +409,35 @@ cvector_vector_type(Token) tokenize(char *s)
 
     cvector_vector_type(Token) tokens = NULL;
     cvector_set_elem_destructor(tokens, free_token);
+
+    while (isspace(*text_ptr))
+    {
+        text_ptr++;
+    }
     while ((text_ptr - s) < len)
     {
-        while (isspace(*text_ptr))
-            text_ptr++;
-
-        Token token;
-        if (!match_token(&text_ptr, &token))
+        if (*text_ptr == '#')
         {
-            fprintf(stderr, "error parsing token\n");
-            abort();
+            while (*text_ptr != '\n')
+            {
+                text_ptr++;
+            }
         }
-        cvector_push_back(tokens, token);
+        else
+        {
+            Token token;
+            if (!match_token(&text_ptr, &token))
+            {
+                fprintf(stderr, "error parsing token\n");
+                abort();
+            }
+            cvector_push_back(tokens, token);
+        }
 
         while (isspace(*text_ptr))
+        {
             text_ptr++;
+        }
     }
     return tokens;
 }
@@ -466,7 +480,21 @@ void test_lex_literals()
     assert(tokens[8].token_type.lit.literal_kind == FloatLit);
     assert(tokens[8].token_type.lit.literal_type.Float == 0.35);
 
-    
-
     cvector_free(tokens);
+}
+
+void test_lex_keywords()
+{
+    char string[] = "fn let if else type";
+    cvector_vector_type(Token) tokens = tokenize(string);
+    for (int i = 0; i < cvector_size(tokens); i++)
+    {
+        assert(tokens[i].token_kind == KwTok);
+    }
+
+    assert(tokens[0].token_type.kw == FnKw);
+    assert(tokens[1].token_type.kw == LetKw);
+    assert(tokens[2].token_type.kw == IfKw);
+    assert(tokens[3].token_type.kw == ElseKw);
+    assert(tokens[4].token_type.kw == TypeKw);
 }

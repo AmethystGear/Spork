@@ -11,7 +11,6 @@ typedef enum KeyWord
     IfKw,
     ElseKw,
     TypeKw,
-    StructKw,
 } KeyWord;
 
 typedef enum
@@ -33,6 +32,7 @@ typedef enum
     AndSym,
     OrSym,
     NotSym,
+    BarSym,
 } Symbol;
 
 typedef enum LiteralKind
@@ -86,5 +86,8 @@ typedef struct Token
 cvector_vector_type(Token) tokenize(char *s);
 void free_token(void *elem);
 sds token_to_string(Token *token);
+
+// TESTS
 void test_lex_literals();
+void test_lex_keywords();
 #endif

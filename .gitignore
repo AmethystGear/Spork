@@ -1,3 +1,4 @@
 *.o
-spork_compiler
-testsuite
+compiler_spork
+testsuite_spork
+makefile

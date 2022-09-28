@@ -1,0 +1,3 @@
+# what are the types we want to support?
+# what is the syntax we want to support?
+(let point (. 5 5) point)

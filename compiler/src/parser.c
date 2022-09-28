@@ -8,6 +8,11 @@
 #include "parser.h"
 #include "utils.h"
 
+static Type *parse_type(ParserPointer *curr);
+typedef void *(*DelimParser)(ParserPointer *curr);
+static TupleKind get_tuple_kind(DelimParser parser, ParserPointer *curr, Token *delim);
+void free_expr(Expr *expr);
+
 static ParserPointer parser_ptr_pop(ParserPointer ptr, Token **token)
 {
     Token *t;
@@ -134,17 +139,61 @@ static Expr *parse_literal(ParserPointer *curr)
 {
     Token *next_token;
     *curr = parser_ptr_pop(*curr, &next_token);
-    if (!match_token(next_token, create_match_token(LitTok, -1, NULL)))
-    {
-        compiler_bug("trying to parse a literal from a token that isn't a literal");
-    }
     Expr *expr = malloc(sizeof(Expr));
     expr->expr_kind = LiteralExpr;
     expr->expr_type.literal = next_token->token_type.lit;
     return expr;
 }
 
-typedef void *(*DelimParser)(ParserPointer *curr);
+static Expr *parse_type_def(ParserPointer *curr)
+{
+    *curr = parser_ptr_pop(*curr, NULL); // skip 'type'
+    Expr *expr = malloc(sizeof(Expr));
+    TypeDef type_def = {.type = parse_type(curr)};
+    expr->expr_kind = TypeDefExpr;
+    expr->expr_type.type_def = type_def;
+    return expr;
+}
+
+static Expr *parse_if_else(ParserPointer *curr)
+{
+    Token *token;
+    *curr = parser_ptr_pop(*curr, &token); // skip 'if'
+    Expr *condition = parse_expr(curr);
+    *curr = parser_ptr_pop(*curr, &token);
+    if (!match_token(token, create_match_token(SymbTok, LeftScopeSym, NULL)))
+    {
+        compiler_error("expected '{' after if condition");
+    }
+    Expr *if_body = parse_expr(curr);
+    Token match_tokens[] = {
+        create_match_token(SymbTok, RightScopeSym, NULL),
+        create_match_token(KwTok, ElseKw, NULL),
+        create_match_token(SymbTok, LeftScopeSym, NULL),
+    };
+    if (!get_match(curr, match_tokens, ARRAY_LEN(match_tokens), NULL))
+    {
+        compiler_error("expected '} else {' after if body");
+    }
+    Expr *else_body = parse_expr(curr);
+    *curr = parser_ptr_pop(*curr, &token);
+    if (!match_token(token, create_match_token(SymbTok, RightScopeSym, NULL)))
+    {
+        compiler_error("expected '}' after else body");
+    }
+
+    IfElse if_else = {
+        .condition = condition,
+        .else_body = else_body,
+        .if_body = if_body,
+    };
+
+    Expr *expr = malloc(sizeof(Expr));
+    expr->expr_kind = IfElseExpr;
+    expr->expr_type.if_else = if_else;
+    return expr;
+}
+
 static cvector_vector_type(void *) parse_delimited(DelimParser parser, Token delim, Token terminator, ParserPointer *curr)
 {
     cvector_vector_type(void *) elems = NULL;
@@ -162,14 +211,112 @@ static cvector_vector_type(void *) parse_delimited(DelimParser parser, Token del
         parser_ptr_pop(*curr, &after_next_token);
         if (match_token(after_next_token, terminator))
         {
+            *curr = parser_ptr_pop(*curr, &next_token);
             break;
         }
     }
-    *curr = parser_ptr_pop(*curr, &next_token);
     return elems;
 }
 
-static Type *parse_type(ParserPointer *curr);
+Expr *parse_expr(ParserPointer *curr);
+static void *parse_expr_wrapper(ParserPointer *curr)
+{
+    return parse_expr(curr);
+}
+
+static void free_expr_ptr(void *elem)
+{
+    Expr **expr = elem;
+    free_expr(*expr);
+}
+
+static Expr *parse_tuple_construct(ParserPointer *curr)
+{
+    *curr = parser_ptr_pop(*curr, NULL); // skip '('
+
+    Token delim;
+    TupleKind tuple_kind = get_tuple_kind(parse_expr_wrapper, curr, &delim);
+    Token right_paren = create_match_token(SymbTok, RightParenSym, NULL);
+    cvector_vector_type(void *) elems = parse_delimited(parse_expr_wrapper, delim, right_paren, curr);
+
+    Tuple tuple = {.exprs = NULL, .tuple_kind = tuple_kind};
+    cvector_set_elem_destructor(tuple.exprs, free_expr_ptr);
+    for (int i = 0; i < cvector_size(elems); i++)
+    {
+        cvector_push_back(tuple.exprs, elems[i]);
+    }
+    cvector_free(elems);
+
+    Expr *expr = malloc(sizeof(Expr));
+    expr->expr_kind = TupleExpr;
+    expr->expr_type.tuple = tuple;
+    return expr;
+}
+
+static void *parse_name_expr_pair(ParserPointer *curr)
+{
+    cvector_vector_type(Token) matched_tokens = NULL;
+    Token match_tokens[] = {
+        create_match_token(IdentTok, -1, NULL),
+        create_match_token(SymbTok, TypeSpecSym, NULL),
+    };
+    if (!get_match(curr, match_tokens, ARRAY_LEN(match_tokens), &matched_tokens))
+    {
+        compiler_error("expected 'identifier' : <type>");
+    }
+
+    NameExprPair *name_type = malloc(sizeof(NameExprPair));
+    name_type->name = matched_tokens[0].token_type.ident;
+    name_type->expr = parse_expr(curr);
+    cvector_free(matched_tokens);
+    return name_type;
+}
+
+static Expr *parse_named_tuple_construct(ParserPointer *curr)
+{
+    *curr = parser_ptr_pop(*curr, NULL); // skip '('
+
+    Token delim;
+    TupleKind tuple_kind = get_tuple_kind(parse_name_expr_pair, curr, &delim);
+    Token right_paren = create_match_token(SymbTok, RightParenSym, NULL);
+    cvector_vector_type(void *) elems = parse_delimited(parse_name_expr_pair, delim, right_paren, curr);
+
+    Tuple tuple = {.exprs = NULL, .tuple_kind = tuple_kind};
+    cvector_set_elem_destructor(tuple.exprs, free_expr_ptr);
+    for (int i = 0; i < cvector_size(elems); i++)
+    {
+        cvector_push_back(tuple.exprs, elems[i]);
+    }
+    cvector_free(elems);
+
+    Expr *expr = malloc(sizeof(Expr));
+    expr->expr_kind = TupleExpr;
+    expr->expr_type.tuple = tuple;
+    return expr;
+}
+
+static TupleKind get_tuple_kind(DelimParser parser, ParserPointer *curr, Token *delim)
+{
+    Token *next_token;
+    ParserPointer ptr = *curr;
+    parser(&ptr);
+    parser_ptr_pop(ptr, &next_token);
+
+    Token sum_delim = create_match_token(SymbTok, DelimSym, NULL);
+    Token product_delim = create_match_token(SymbTok, BarSym, NULL);
+
+    if (match_token(next_token, product_delim))
+    {
+        *delim = product_delim;
+        return Product;
+    }
+    else
+    {
+        *delim = sum_delim;
+        return Sum;
+    }
+}
+
 static void *parse_name_type_pair(ParserPointer *curr)
 {
     cvector_vector_type(Token) matched_tokens = NULL;
@@ -212,15 +359,16 @@ static Type *parse_named_tuple_type(ParserPointer *curr)
     }
     *curr = parser_ptr_pop(*curr, NULL); // skip left paren
 
-    Token delim = create_match_token(SymbTok, DelimSym, NULL);
+    Token delim;
+    TupleKind tuple_kind = get_tuple_kind(parse_name_type_pair, curr, &delim);
     Token right_paren = create_match_token(SymbTok, RightParenSym, NULL);
     cvector_vector_type(void *) elems = parse_delimited(parse_name_type_pair, delim, right_paren, curr);
 
-    NamedTuple named_tuple = NULL;
-    cvector_set_elem_destructor(named_tuple, free_name_type_pair_ptr);
+    NamedTupleT named_tuple = {.named_tuple = NULL, .tuple_kind = tuple_kind};
+    cvector_set_elem_destructor(named_tuple.named_tuple, free_name_type_pair_ptr);
     for (int i = 0; i < cvector_size(elems); i++)
     {
-        cvector_push_back(named_tuple, elems[i]);
+        cvector_push_back(named_tuple.named_tuple, elems[i]);
     }
     cvector_free(elems);
 
@@ -250,15 +398,17 @@ static Type *parse_tuple_type(ParserPointer *curr)
         return NULL;
     }
     *curr = next;
-    Token delim = create_match_token(SymbTok, DelimSym, NULL);
+
+    Token delim;
+    TupleKind tuple_kind = get_tuple_kind(parse_type_wrapper, curr, &delim);
     Token right_paren = create_match_token(SymbTok, RightParenSym, NULL);
     cvector_vector_type(void *) elems = parse_delimited(parse_type_wrapper, delim, right_paren, curr);
 
-    Tuple tuple = NULL;
-    cvector_set_elem_destructor(tuple, free_type_ptr);
+    TupleT tuple = {.tuple = NULL, .tuple_kind = tuple_kind};
+    cvector_set_elem_destructor(tuple.tuple, free_type_ptr);
     for (int i = 0; i < cvector_size(elems); i++)
     {
-        cvector_push_back(tuple, elems[i]);
+        cvector_push_back(tuple.tuple, elems[i]);
     }
     cvector_free(elems);
 
@@ -345,6 +495,18 @@ Expr *parse_expr(ParserPointer *curr)
     {
         return parse_let(curr);
     }
+    if (match_token(token, create_match_token(KwTok, TypeKw, NULL)))
+    {
+        return parse_type_def(curr);
+    }
+    if (match_token(token, create_match_token(KwTok, IfKw, NULL)))
+    {
+        return parse_if_else(curr);
+    }
+    if (match_token(token, create_match_token(KwTok, FnKw, NULL)))
+    {
+        return parse_fn_def(curr);
+    }
     compiler_error("cannot parse expression");
     return NULL;
 }
@@ -353,22 +515,59 @@ void free_type(Type *type)
 {
     if (type->type_kind == TupleType)
     {
-        cvector_free(type->type_type.tuple);
+        cvector_free(type->type_type.tuple.tuple);
     }
     if (type->type_kind == NamedTupleType)
     {
-        cvector_free(type->type_type.named_tuple);
+        cvector_free(type->type_type.named_tuple.named_tuple);
     }
     free(type);
 }
-
+/*
+    LiteralExpr,
+    LetExpr,
+    FnDefExpr,
+    TypeDefExpr,
+    IfElseExpr,
+    VarExpr,
+    FnCallExpr,
+    TupleExpr
+*/
 void free_expr(Expr *expr)
 {
+    // LiteralExpr and VarExpr don't need to be freed here, since we just
+    // take the token value. So when we free the token vector,
+    // all LiteralExprs/VarExprs will be freed.
     if (expr->expr_kind == LetExpr)
     {
         free_expr(expr->expr_type.let.equal_expr);
         free_expr(expr->expr_type.let.next_expr);
     }
+    if (expr->expr_kind == FnDefExpr)
+    {
+        Type *type = malloc(sizeof(Type));
+        type->type_kind = NamedTupleType;
+        type->type_type.named_tuple = expr->expr_type.fn_def.arguments;
+        free_type(type);
+        free_expr(expr->expr_type.fn_def.body);
+        free_type(expr->expr_type.fn_def.return_type);
+    }
+    if (expr->expr_kind == TypeDefExpr)
+    {
+        free_type(expr->expr_type.type_def.type);
+    }
+    if (expr->expr_kind == IfElseExpr)
+    {
+        free_expr(expr->expr_type.if_else.condition);
+        free_expr(expr->expr_type.if_else.if_body);
+        free_expr(expr->expr_type.if_else.else_body);
+    }
+    if (expr->expr_kind == FnCallExpr)
+    {
+        Type *type = malloc(sizeof(Type));
+        free_expr(expr->expr_type.fn_call.params);
+    }
+        
     free(expr);
 }
 
@@ -381,7 +580,6 @@ void test_parse_let()
     ParserPointer start = {.token_ptr = 0, .tokens = tokens};
     Expr *program = parse_expr(&start);
 
-    // verify that our parse tree representation is correct
     assert(program->expr_kind == LetExpr);
     assert(strcmp(program->expr_type.let.variable, "x") == 0);
     assert(program->expr_type.let.equal_expr->expr_kind == LiteralExpr);
@@ -395,6 +593,28 @@ void test_parse_let()
     cvector_free(tokens);
 }
 
+void test_parse_if_else()
+{
+    char program_string[] = "if true { 0 } else { 1 }";
+    cvector_vector_type(Token) tokens = tokenize(program_string);
+
+    ParserPointer start = {.token_ptr = 0, .tokens = tokens};
+    Expr *program = parse_expr(&start);
+
+    assert(program->expr_kind == IfElseExpr);
+    assert(program->expr_type.if_else.condition->expr_kind == LiteralExpr);
+    assert(program->expr_type.if_else.condition->expr_type.literal.literal_kind == BoolLit);
+    assert(program->expr_type.if_else.condition->expr_type.literal.literal_type.Bool);
+
+    assert(program->expr_type.if_else.if_body->expr_kind == LiteralExpr);
+    assert(program->expr_type.if_else.if_body->expr_type.literal.literal_kind == IntLit);
+    assert(program->expr_type.if_else.if_body->expr_type.literal.literal_type.Int == 0);
+
+    assert(program->expr_type.if_else.else_body->expr_kind == LiteralExpr);
+    assert(program->expr_type.if_else.else_body->expr_type.literal.literal_kind == IntLit);
+    assert(program->expr_type.if_else.else_body->expr_type.literal.literal_type.Int == 1);
+}
+
 void test_parse_type()
 {
     char type_string[] = "(int, string, (thing, bool, float),)";
@@ -405,17 +625,18 @@ void test_parse_type()
 
     // verify that our type representation is correct
     assert(type->type_kind == TupleType);
-    assert(type->type_type.tuple[0]->type_kind == LitType);
-    assert(type->type_type.tuple[0]->type_type.literal == IntLit);
-    assert(type->type_type.tuple[1]->type_kind == LitType);
-    assert(type->type_type.tuple[1]->type_type.literal == StringLit);
-    assert(type->type_type.tuple[2]->type_kind == TupleType);
-    assert(type->type_type.tuple[2]->type_type.tuple[0]->type_kind == DefType);
-    assert(strcmp(type->type_type.tuple[2]->type_type.tuple[0]->type_type.defined, "thing") == 0);
-    assert(type->type_type.tuple[2]->type_type.tuple[1]->type_kind == LitType);
-    assert(type->type_type.tuple[2]->type_type.tuple[1]->type_type.literal == BoolLit);
-    assert(type->type_type.tuple[2]->type_type.tuple[2]->type_kind == LitType);
-    assert(type->type_type.tuple[2]->type_type.tuple[2]->type_type.literal == FloatLit);
+    assert(type->type_type.tuple.tuple_kind == Sum);
+    assert(type->type_type.tuple.tuple[0]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[0]->type_type.literal == IntLit);
+    assert(type->type_type.tuple.tuple[1]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[1]->type_type.literal == StringLit);
+    assert(type->type_type.tuple.tuple[2]->type_kind == TupleType);
+    assert(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[0]->type_kind == DefType);
+    assert(strcmp(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[0]->type_type.defined, "thing") == 0);
+    assert(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[1]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[1]->type_type.literal == BoolLit);
+    assert(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[2]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[2]->type_type.tuple.tuple[2]->type_type.literal == FloatLit);
 
     free_type(type);
     cvector_free(tokens);
@@ -430,13 +651,77 @@ void test_parse_named_type()
     Type *type = parse_type(&start);
 
     assert(type->type_kind == NamedTupleType);
-    assert(strcmp(type->type_type.named_tuple[0]->name, "x") == 0);
-    assert(type->type_type.named_tuple[0]->type->type_kind == LitType);
-    assert(type->type_type.named_tuple[0]->type->type_type.literal == IntLit);
-    assert(strcmp(type->type_type.named_tuple[1]->name, "y") == 0);
-    assert(type->type_type.named_tuple[1]->type->type_kind == LitType);
-    assert(type->type_type.named_tuple[1]->type->type_type.literal == IntLit);
+    assert(type->type_type.named_tuple.tuple_kind == Sum);
+    assert(strcmp(type->type_type.named_tuple.named_tuple[0]->name, "x") == 0);
+    assert(type->type_type.named_tuple.named_tuple[0]->type->type_kind == LitType);
+    assert(type->type_type.named_tuple.named_tuple[0]->type->type_type.literal == IntLit);
+    assert(strcmp(type->type_type.named_tuple.named_tuple[1]->name, "y") == 0);
+    assert(type->type_type.named_tuple.named_tuple[1]->type->type_kind == LitType);
+    assert(type->type_type.named_tuple.named_tuple[1]->type->type_type.literal == IntLit);
 
     free_type(type);
     cvector_free(tokens);
+}
+
+void test_parse_variant_type()
+{
+    char type_string[] = "(int | string)";
+    cvector_vector_type(Token) tokens = tokenize(type_string);
+    ParserPointer start = {.token_ptr = 0, .tokens = tokens};
+
+    Type *type = parse_type(&start);
+    assert(type->type_kind == TupleType);
+    assert(type->type_type.tuple.tuple_kind == Product);
+    assert(type->type_type.tuple.tuple[0]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[0]->type_type.literal == IntLit);
+    assert(type->type_type.tuple.tuple[1]->type_kind == LitType);
+    assert(type->type_type.tuple.tuple[1]->type_type.literal == StringLit);
+
+    free_type(type);
+    cvector_free(tokens);
+}
+
+void test_parse_named_variant_type()
+{
+    char type_string[] = "(x : int | y : int)";
+    cvector_vector_type(Token) tokens = tokenize(type_string);
+    ParserPointer start = {.token_ptr = 0, .tokens = tokens};
+
+    Type *type = parse_type(&start);
+
+    assert(type->type_kind == NamedTupleType);
+    assert(type->type_type.named_tuple.tuple_kind == Product);
+    assert(strcmp(type->type_type.named_tuple.named_tuple[0]->name, "x") == 0);
+    assert(type->type_type.named_tuple.named_tuple[0]->type->type_kind == LitType);
+    assert(type->type_type.named_tuple.named_tuple[0]->type->type_type.literal == IntLit);
+    assert(strcmp(type->type_type.named_tuple.named_tuple[1]->name, "y") == 0);
+    assert(type->type_type.named_tuple.named_tuple[1]->type->type_kind == LitType);
+    assert(type->type_type.named_tuple.named_tuple[1]->type->type_type.literal == IntLit);
+
+    free_type(type);
+    cvector_free(tokens);
+}
+
+void test_parse_type_def()
+{
+    char program_string[] =
+        "let Struct = type (x : int, y : int);"
+        "let Tuple = type (float, float);"
+        "let Variant = type (int | float );"
+        "let Enum = type (BetweenZeroAndTen : int | Integer1 : int | Float : float);"
+        "let NewType = type int;"
+        "let A = type (int); let B = type (int,); let C = type (int|);"
+        "let D = type (int|float|); let E = type (x : int|y : int|);"
+        "let F = type (x : int, y : int,);"
+        "0";
+
+    cvector_vector_type(Token) tokens = tokenize(program_string);
+
+    ParserPointer start = {.token_ptr = 0, .tokens = tokens};
+    Expr *program = parse_expr(&start);
+    while (program->expr_kind == LetExpr)
+    {
+        assert(program->expr_type.let.equal_expr->expr_kind == TypeDefExpr);
+        program = program->expr_type.let.next_expr;
+    }
 }
