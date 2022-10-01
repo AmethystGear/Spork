@@ -1,0 +1,18 @@
+(let res (ops 1 + 2 * 10))
+
+
+enum IpAddrKind {
+    V4,
+    V6,
+}
+
+(let IpAddrKind (enum 
+
+))
+
+(. (x 10) (y 10))
+
+(| (Enum 10)) --> (variant int ...)
+
+
+(| int string)
