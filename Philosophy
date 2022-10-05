@@ -1,0 +1,12 @@
+A WIZARD'S ADVICE
+
+- Magic Has a Cost
+Magic is inherently volatile. A little magic can be good, it can make verbose scripture concise, and thus more readable. However, ALL Magic Has a Cost. Every bit of magic you use increases the wizard's overhead - the things they need to remember. And when, inevitably, a wizard forgets, the scripture will become indecipherable. Or worse - if the wizard *misunderstands*, logic demons can carve their way into the scripture, rendering the it filled with demons, and thus, useless. Use magic sparingly, and keep to consistency. It is far better to use the same 'boring' rules and constructs, than to fill the baselang with Magic and cause wizard's minds to explode. Regularity is your friend.
+
+- No Free Lunch
+All scriptlangs make tradeoffs in their design. This is known commonly to wizards as the ancient saying "No Free Lunch". Consider the GC'd scriptlangs and the memory-managed/RAII/Ownership scriptures, for example. Both are viable approaches for different wizard-problem-spaces. There are similar tradeoffs, not just within scriptlangs, but in any problem space that involves scriptures. One could say that scripting itself can be boiled down to decision making and tradeoffs.
+
+
+
+
+

@@ -59,7 +59,8 @@ bool is_end_of_string_literal(char *start, char *curr) {
 
 /**
  * @brief parse an atom. An Atom is either a literal (number, bool, string), or
- * a symbol.
+ * a symbol. No symbols may start with backslash (this is so that we can parse
+ * strings easier)
  *
  * @param text_ptr
  * @return Atom
@@ -121,16 +122,17 @@ Expression *parse_expr(char **text_ptr) {
     if ((curr - start) >= len) {
         return NULL;
     }
-    
+
     Expression *expr = malloc(sizeof(Expression));
     expr->atomic = *curr != '(';
     if (expr->atomic) {
         expr->data.atom = parse_atom(&curr);
     } else {
         curr++;
-        expr->data.exprs = NULL;
+        expr->data.expr = NULL;
+        consume_whitespace(&curr);
         while (*curr != ')') {
-            cvector_push_back(expr->data.exprs, parse_expr(&curr));
+            cvector_push_back(expr->data.expr, parse_expr(&curr));
             consume_whitespace(&curr);
             if (*curr == '\0') {
                 syntax_error("missing closing paren");
@@ -144,8 +146,8 @@ Expression *parse_expr(char **text_ptr) {
 
 /**
  * @brief free the provided atom (literal or symbol)
- * 
- * @param atom 
+ *
+ * @param atom
  */
 static void free_atom(Atom atom) {
     if (atom.kind == SymbolAtom) {
@@ -164,8 +166,8 @@ void free_expr(Expression *expr) {
     if (expr->atomic) {
         free_atom(expr->data.atom);
     } else {
-        for (int i = 0; i < cvector_size(expr->data.exprs); i++) {
-            free_expr(expr->data.exprs[i]);
+        for (int i = 0; i < cvector_size(expr->data.expr); i++) {
+            free_expr(expr->data.expr[i]);
         }
     }
     free(expr);
