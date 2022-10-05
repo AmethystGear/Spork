@@ -1,0 +1,5 @@
+- Magic Has a Cost
+Don't use too much magic. A little magic is good, it can make verbose code concise, and thus more readable. However, Magic Has a Cost. Every bit of magic you use increases the wizard's overhead - the things they need to remember. And when, inevitably, a wizard forgets, the code will become indecipherable. Thus, use magic sparingly, and keep to consistency. It is far better to use the same boring rules and constructs, than to fill the base language with Magic and cause wizard's minds to explode.
+
+What is Magic?
+Anything that can break the wizard's mental model of the code is indecipherable from Magic.
