@@ -8,6 +8,8 @@ LINKER = 'ld'
 
 FLAGS = '-g -O0'
 
+LINKER_FLAGS = '-g -O0'
+
 MAIN = 'main.c'
 
 C_FILE_EXT = '.c'
@@ -71,7 +73,7 @@ def add_dir_incremental_build(makefile: TextIOWrapper, dir: str):
     build_command = makefile_build.format(
         dir + OBJ_FILE_EXT,
         ' '.join(objs),
-        ' '.join([LINKER, '-r'] + objs + ['-o', dir + OBJ_FILE_EXT, FLAGS])
+        ' '.join([LINKER, '-r'] + objs + ['-o', dir + OBJ_FILE_EXT, LINKER_FLAGS])
     )
     makefile.write(build_command)
     return dir + OBJ_FILE_EXT
@@ -83,7 +85,7 @@ def add_single_file_incremental_build(makefile: TextIOWrapper, file: str, dir: s
         COMPILER,
         file,
         dir,
-        FLAGS
+        FLAGS,
     )
     makefile.write(makefile_build)
     return file + OBJ_FILE_EXT
@@ -91,12 +93,13 @@ def add_single_file_incremental_build(makefile: TextIOWrapper, file: str, dir: s
 
 # add a target
 def add_linker_target(makefile, target, target_deps, target_obj_deps, exec, run_exec):
-    makefile_build = '{1}: {2}\n\t{0} {3} -o {4}'.format(
+    makefile_build = '{1}: {2}\n\t{0} {3} -o {4} {5}'.format(
         COMPILER,
         target,
         "{} {}".format(target_obj_deps, target_deps),
         target_obj_deps,
-        exec
+        exec,
+        '-rdynamic'
     )
 
     if run_exec:

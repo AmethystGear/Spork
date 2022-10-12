@@ -19,6 +19,9 @@
  * @return Literal
  */
 Literal match_int_literal(sds token) {
+    if (strcmp(token, "-") == 0) {
+        return (Literal){.kind = InvalidLit};
+    }
     char* curr = token;
     if (*curr == '\0') {
         Literal literal;

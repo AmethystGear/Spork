@@ -2,10 +2,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <execinfo.h>
 
 #include "escape.h"
 #include "literal.h"
 #include "parser.h"
+#include "interpreter.h"
 //#include "typechecker.h"
 
 /**
@@ -61,6 +63,34 @@ void print_atom(Atom atom) {
     }
 }
 
+void print_val(Val val) {
+    switch (val.kind)
+    {
+        case BuiltinFnVal: 
+            backtrace_symbols_fd(&val.type.bfn, 1, 1); 
+            break;
+        case FnVal: 
+            printf("fn ("); 
+            for (int i = 0; i < cvector_size(val.type.fn.args); i++) {
+                printf(" %s", val.type.fn.args[i]);
+            }
+            printf(" ) ");
+            print_expr(val.type.fn.body);
+            break;
+        case LiteralVal:
+            print_literal(val.type.lit);
+            break;
+        case TupleVal:
+            printf("(");
+            for (int i = 0; i < cvector_size(val.type.tup.values); i++) {
+                printf(" ");
+                print_val(val.type.tup.values[i]);
+            }
+            printf(" )");
+            break;
+    }
+}
+
 /**
  * @brief print readable version of expression
  *
@@ -71,11 +101,11 @@ void print_expr(Expression *expr) {
         print_atom(expr->data.atom);
     } else {
         printf("(");
-        for (int i = 0; i < cvector_size(expr->data.exprs); i++) {
+        for (int i = 0; i < cvector_size(expr->data.expr); i++) {
             if (i != 0) {
                 printf(" ");
             }
-            print_expr(expr->data.exprs[i]);
+            print_expr(expr->data.expr[i]);
         }
         printf(")");
     }   

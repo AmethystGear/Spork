@@ -131,14 +131,39 @@ Expression *parse_expr(char **text_ptr) {
         curr++;
         expr->data.expr = NULL;
         consume_whitespace(&curr);
+
+        bool is_let = false;
+        bool first = true;
+        int i = 0;
         while (*curr != ')') {
-            cvector_push_back(expr->data.expr, parse_expr(&curr));
+            Expression* ex = parse_expr(&curr);
+            if (ex == NULL) {
+                syntax_error("expected expression as argument, found nothing");
+            }
+            cvector_push_back(expr->data.expr, ex);
+            if (first && expr->data.expr[0]->atomic &&
+                expr->data.expr[0]->data.atom.kind == SymbolAtom &&
+                strcmp(expr->data.expr[0]->data.atom.type.symbol, "let") == 0) {
+                    is_let = true;
+            }
             consume_whitespace(&curr);
             if (*curr == '\0') {
                 syntax_error("missing closing paren");
             }
+            first = false;
         }
         curr++;
+        
+        if (is_let) {
+            if (cvector_size(expr->data.expr) != 3) {
+                syntax_error("too many arguments to let (expects only variable and binding)");
+            }
+            Expression* ex = parse_expr(&curr);
+            if (ex == NULL) {
+                syntax_error("expected expression after let expression, found nothing");
+            }
+            cvector_push_back(expr->data.expr, ex);
+        }
     }
     *text_ptr = curr;
     return expr;

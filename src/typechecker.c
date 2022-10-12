@@ -12,3 +12,5 @@
 #include "utils.h"
 
 
+// every Expr has a Type (the Type of what it evaluates to)
+// (let x y) x

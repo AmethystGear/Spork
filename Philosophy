@@ -1,10 +1,14 @@
 A WIZARD'S ADVICE
 
 - Magic Has a Cost
-Magic is inherently volatile. A little magic can be good, it can make verbose scripture concise, and thus more readable. However, ALL Magic Has a Cost. Every bit of magic you use increases the wizard's overhead - the things they need to remember. And when, inevitably, a wizard forgets, the scripture will become indecipherable. Or worse - if the wizard *misunderstands*, logic demons can carve their way into the scripture, rendering the it filled with demons, and thus, useless. Use magic sparingly, and keep to consistency. It is far better to use the same 'boring' rules and constructs, than to fill the baselang with Magic and cause wizard's minds to explode. Regularity is your friend.
+Magic is inherently volatile. A little magic can be good, it can make verbose scripture concise, and thus more readable. However, ALL Magic Has a Cost. Every bit of magic you use increases the wizard's overhead - the things they need to remember. And when, inevitably, a wizard forgets, the scripture will become indecipherable. Or worse - if the wizard *misunderstands*, logic demons can carve their way into the scripture, rendering the it filled with demons, and thus, useless. Use magic sparingly, and keep to consistency. It is far better to use the same 'boring' rules and constructs, than to fill the baselang with Magic and cause wizard's minds to explode. Regularity is your friend, to be betrayed only when neccesary.
 
-- No Free Lunch
+- No Free Lunch (Generalization of Magic Has a Cost)
 All scriptlangs make tradeoffs in their design. This is known commonly to wizards as the ancient saying "No Free Lunch". Consider the GC'd scriptlangs and the memory-managed/RAII/Ownership scriptures, for example. Both are viable approaches for different wizard-problem-spaces. There are similar tradeoffs, not just within scriptlangs, but in any problem space that involves scriptures. One could say that scripting itself can be boiled down to decision making and tradeoffs.
+
+- Lower Overhead at Nearly All Costs
+The less the overhead the more productive the wizard. Scripts WILL be changed frequently, and the greater the overhead the more things the wizard will need to remember to make a change, and the slower the change will neccesarily be. Overhead should only NOT be lowered in situations where the complexity is *inherent to the problem space*, that is, the complexity has a 1:1 mapping to the problem itself. In all other situations, **LOWER THE OVERHEAD**
+
 
 
 
