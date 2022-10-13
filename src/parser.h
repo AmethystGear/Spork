@@ -40,6 +40,7 @@ typedef union ExpressionData {
  */
 typedef struct Expression {
     ExpressionData data;
+    Expression* chain;
     bool atomic;
 } Expression;
 

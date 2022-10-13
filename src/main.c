@@ -57,7 +57,13 @@ Val builtin_eq(Tuple tup) {
                                            tup.values[1].type.lit.type.Int}};
 }
 
-
+Val builtin_print(Tuple tup) {
+    assert(cvector_size(tup.values) == 1);
+    assert(tup.values[0].kind == LiteralVal);
+    assert(tup.values[0].type.lit.kind == StringLit);
+    printf("%s", tup.values[0].type.lit.type.String);
+    return (Val){.kind = TupleVal, .type.tup = (Tuple){.values = NULL}};
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -96,6 +102,11 @@ int main(int argc, char *argv[]) {
     binding = (LexicalBinding){
         .symbol = "/",
         .boundValue = (Val){.kind = BuiltinFnVal, .type.bfn = builtin_div}};
+    cvector_push_back(env, binding);
+
+    binding = (LexicalBinding){
+        .symbol = "print",
+        .boundValue = (Val){.kind = BuiltinFnVal, .type.bfn = builtin_print}};
     cvector_push_back(env, binding);
 
 

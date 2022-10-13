@@ -31,16 +31,22 @@ Val eval(Expression* expr, cvector_vector_type(LexicalBinding) * env) {
     } else {
         // special forms
         Symbol first_symbol = get_as_symbol(expr->data.expr[0]);
+
         if (first_symbol) {
             if (strcmp(first_symbol, "let") == 0) {
-                assert(cvector_size(expr->data.expr) == 4);
+                assert(cvector_size(expr->data.expr) == 3);
                 Symbol variable = get_as_symbol(expr->data.expr[1]);
                 assert(variable != NULL);
                 LexicalBinding binding = {
                     .symbol = variable,
                     .boundValue = eval(expr->data.expr[2], env)};
                 cvector_push_back(*env, binding);
-                return eval(expr->data.expr[3], env);
+                if (expr->chain != NULL) {
+                    return eval(expr->chain, env);
+                } else {
+                    return (Val){.kind = TupleVal,
+                                 .type.tup = (Tuple){.values = NULL}};
+                }
             }
             if (strcmp(first_symbol, "if") == 0) {
                 assert(cvector_size(expr->data.expr) == 4);
@@ -80,15 +86,22 @@ Val eval(Expression* expr, cvector_vector_type(LexicalBinding) * env) {
             cvector_push_back(args.values, eval(expr->data.expr[i], env));
         }
 
+        Val val;
         if (fn.kind == BuiltinFnVal) {
-            return fn.type.bfn(args);
+            val = fn.type.bfn(args);
         } else {
             for (int i = 0; i < cvector_size(fn.type.fn.args); i++) {
                 LexicalBinding binding = {.symbol = fn.type.fn.args[i],
                                           .boundValue = args.values[i]};
                 cvector_push_back(*env, binding);
             }
-            return eval(fn.type.fn.body, env);
+            val = eval(fn.type.fn.body, env);
+        }
+
+        if (expr->chain != NULL) {
+            return eval(expr->chain, env);
+        } else {
+            return val;
         }
     }
 }

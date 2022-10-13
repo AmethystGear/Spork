@@ -1,13 +1,13 @@
 #include "utils.h"
 
+#include <execinfo.h>
 #include <stdio.h>
 #include <string.h>
-#include <execinfo.h>
 
 #include "escape.h"
+#include "interpreter.h"
 #include "literal.h"
 #include "parser.h"
-#include "interpreter.h"
 //#include "typechecker.h"
 
 /**
@@ -64,13 +64,14 @@ void print_atom(Atom atom) {
 }
 
 void print_val(Val val) {
-    switch (val.kind)
-    {
-        case BuiltinFnVal: 
-            backtrace_symbols_fd(&val.type.bfn, 1, 1); 
+    switch (val.kind) {
+        case BuiltinFnVal:;
+            char **symbols = backtrace_symbols(&val.type.bfn, 1);
+            printf("%s", *symbols);
+            free(symbols);
             break;
-        case FnVal: 
-            printf("fn ("); 
+        case FnVal:
+            printf("fn (");
             for (int i = 0; i < cvector_size(val.type.fn.args); i++) {
                 printf(" %s", val.type.fn.args[i]);
             }
@@ -83,10 +84,12 @@ void print_val(Val val) {
         case TupleVal:
             printf("(");
             for (int i = 0; i < cvector_size(val.type.tup.values); i++) {
-                printf(" ");
                 print_val(val.type.tup.values[i]);
+                if (i != cvector_size(val.type.tup.values) - 1) {
+                    printf(" ");
+                }
             }
-            printf(" )");
+            printf(")");
             break;
     }
 }
@@ -108,7 +111,7 @@ void print_expr(Expression *expr) {
             print_expr(expr->data.expr[i]);
         }
         printf(")");
-    }   
+    }
 }
 
 /**
