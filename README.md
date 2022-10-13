@@ -2,7 +2,7 @@
 A lisp-inspired language, that aims to be statically typed.
 
 # Dependencies
-you will need `clang` and `ld` on your machine to compile and link the spork interpreter.
+you will need `clang`, `python3`, and `ld` on your machine to compile the spork interpreter.
 
 # To Run Programs
 build the spork interpreter first:
