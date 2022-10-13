@@ -1,6 +1,9 @@
 # Spork
 A lisp-inspired language, that aims to be statically typed.
 
+# Dependencies
+you will need `clang` and `ld` on your machine to compile and link the spork interpreter.
+
 # To Run Programs
 build the spork interpreter first:
 ```
@@ -10,6 +13,15 @@ then you can run a program with:
 ```
 ./compiler_spork <name of the program>
 ```
+
+if you ever need a clean build of the spork interpreter:
+
+```
+python build.py clean && python build.py all
+```
+
+check out the example_programs folder for some sample spork programs.
+
 # Writing Spork Programs
 Spork syntax is extremely simple, taking most of it's inspiration from lisp. In general, the syntax is as follows:
 ```
