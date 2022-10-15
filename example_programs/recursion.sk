@@ -1,7 +1,9 @@
+(# demoing some simple recursion);
 (let x (fn (a b c d)  
     (if (== a 0) 
         b 
         (x (- a c) (- b d) c d)
     )
 ));
+(print "running the function 'x' gives us: ");
 (x 10 100 10 10)

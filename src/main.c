@@ -62,7 +62,7 @@ Val builtin_print(Tuple tup) {
     assert(tup.values[0].kind == LiteralVal);
     assert(tup.values[0].type.lit.kind == StringLit);
     printf("%s", tup.values[0].type.lit.type.String);
-    return (Val){.kind = TupleVal, .type.tup = (Tuple){.values = NULL}};
+    return (Val){.kind = VoidVal};
 }
 
 int main(int argc, char *argv[]) {
@@ -112,6 +112,5 @@ int main(int argc, char *argv[]) {
 
 
     print_val(eval(expr, &env));
-    printf("\n");
     free_expr(expr);
 }

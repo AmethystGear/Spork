@@ -91,7 +91,10 @@ void print_val(Val val) {
             }
             printf(")");
             break;
+        case VoidVal:
+            return;
     }
+    printf("\n");
 }
 
 /**

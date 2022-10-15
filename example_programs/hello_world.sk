@@ -1,1 +1,5 @@
+(#  this program returns the string hello world, so it's printed to the console in 
+    quotes and with a newline. If you wanted to actually just print out "hello world" 
+    w/o the quotes and newline, you could do `(print "hello world")` instead.);
+
 "hello world"

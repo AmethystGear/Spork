@@ -1,1 +1,2 @@
+(# you can return functions in programs, including builtin functions);
 (print "the function 'print' is: "); print

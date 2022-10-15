@@ -17,7 +17,7 @@ typedef struct Fn {
 
 typedef Val (*BuiltinFn)(Tuple tup);
 
-typedef enum ValKind { LiteralVal, TupleVal, FnVal, BuiltinFnVal } ValKind;
+typedef enum ValKind { LiteralVal, TupleVal, FnVal, BuiltinFnVal, VoidVal } ValKind;
 typedef union ValType {
     Literal lit;
     Tuple tup;
